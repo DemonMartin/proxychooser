@@ -2,6 +2,8 @@
 
 A simple proxy chooser to choose proxies from a list or test proxies, only supports http/https proxies.
 
+GitHub: https://github.com/DemonMartin/proxychooser/
+
 ## Installation
 
 ```bash
