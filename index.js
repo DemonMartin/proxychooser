@@ -22,6 +22,7 @@ class ProxyChooser {
    * @property {number} [maxTimeout=1000] - Max timeout for a request
    * @property {string} [pingUrl="http://myexternalip.com/raw"] - URL to use to check proxy
    * @property {boolean} [forceRetry=false] - Whether function getProxy should continue searching even on error
+   * @property {number} [maxRetries=100] - Max retries for a request
    */
 
     /**
@@ -47,7 +48,8 @@ class ProxyChooser {
             maxTimeout: 1000,
             verboseIdentifier: "[proxyChooser]",
             pingUrl: "http://myexternalip.com/raw",
-            forceRetry: false
+            forceRetry: false,
+            maxRetries: 100
         };
         this.#cache = [];
     }
@@ -293,7 +295,7 @@ class ProxyChooser {
     * Gets the next working proxy from the proxy list.
     * @returns {Promise<string|null>} Next working proxy or null if no proxy is available
     */
-    async getProxy() {
+    async getProxy(retries = 0) {
         this.validateOptions();
         try {
             const proxyList = this.#proxyList.filter(cproxy => !this.#cache.includes(cproxy));
@@ -319,7 +321,11 @@ class ProxyChooser {
             if (workingProxy) {
                 return proxy;
             } else {
-                return this.getProxy();
+                if (retries < options.maxRetries) {
+                    return this.getProxy(retries + 1);
+                } else {
+                    throw new Error(`Max retries (${options.maxRetries}) exceeded`);
+                }
             }
         } catch (error) {
             if (this.#options.forceRetry) {
@@ -327,7 +333,7 @@ class ProxyChooser {
                     console.log(`${this.#options.verboseIdentifier} ${error} | Retrying...  (forceRetry enabled)`)
                 }
                 this.resetCache();
-                return this.getProxy();
+                return this.getProxy(retries + 1);
             } else {
                 throw new Error(error);
             }
